@@ -1193,4 +1193,219 @@ export function registerEVMTools(server: McpServer) {
       }
     }
   );
+
+  // ZILLIQA TOOLS
+  
+  // Convert Zilliqa address between bech32 (zil1...) and hex (0x...) formats
+  server.tool(
+    "convert_zilliqa_address",
+    "Convert a Zilliqa address between bech32 (zil1...) and hex (0x...) formats. Only valid for Zilliqa networks.",
+    {
+      address: z.string().describe("The Zilliqa address to convert (either 'zil1...' or '0x...')"),
+      direction: z.enum(["bech32-to-hex", "hex-to-bech32"]).optional().describe("Direction of conversion. If omitted, inferred from the input."),
+      network: z.string().optional().describe("Network must be 'zilliqa' or 'zilliqa-testnet'. Defaults to 'zilliqa'.")
+    },
+    async ({ address, direction, network = "zilliqa" }) => {
+      try {
+        const chainId = await services.getChainId(network);
+        const isZilliqaNetwork = chainId === 32769 || chainId === 33101;
+        if (!isZilliqaNetwork) {
+          return {
+            content: [{
+              type: "text",
+              text: `Error: Network '${network}' (chainId ${chainId}) is not a Zilliqa network. Use 'zilliqa' or 'zilliqa-testnet'.`
+            }],
+            isError: true
+          };
+        }
+
+        let inferredDirection: "bech32-to-hex" | "hex-to-bech32" | undefined = direction;
+        if (!inferredDirection) {
+          if (address.startsWith("zil1")) inferredDirection = "bech32-to-hex";
+          else if (address.startsWith("0x") || /^[0-9a-fA-F]{40}$/.test(address)) inferredDirection = "hex-to-bech32";
+        }
+
+        if (!inferredDirection) {
+          return {
+            content: [{
+              type: "text",
+              text: `Error: Unable to infer direction. Provide a 'zil1...' bech32 or a '0x...' hex address, or set the 'direction' explicitly.`
+            }],
+            isError: true
+          };
+        }
+
+        let output: string;
+        if (inferredDirection === "bech32-to-hex") {
+          output = services.zilliqa.zilToHex(address);
+        } else {
+          const hexInput = address.startsWith("0x") ? address : `0x${address}`;
+          output = services.zilliqa.hexToZil(hexInput);
+        }
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              network,
+              chainId,
+              input: address,
+              output,
+              direction: inferredDirection
+            }, null, 2)
+          }]
+        };
+      } catch (error) {
+        return {
+          content: [{
+            type: "text",
+            text: `Error converting Zilliqa address: ${error instanceof Error ? error.message : String(error)}`
+          }],
+          isError: true
+        };
+      }
+    }
+  );
+
+  // Request Zilliqa faucet tokens
+  server.tool(
+    "request_zilliqa_faucet",
+    "Request test tokens from Zilliqa testnet faucet for development and testing purposes",
+    {
+      address: z.string().describe("Zilliqa address to receive tokens (can be bech32 'zil1...' or hex '0x...' format)")
+    },
+    async ({ address }) => {
+      try {
+        // Validate the address first
+        let isValidAddress = false;
+        let validationError = '';
+        
+        try {
+          if (address.startsWith('zil1')) {
+            // Validate bech32 address
+            services.zilliqa.zilToHex(address);
+            isValidAddress = true;
+          } else if (address.startsWith('0x') || /^[0-9a-fA-F]{40}$/.test(address)) {
+            // Validate hex address
+            services.zilliqa.hexToZil(address.startsWith('0x') ? address : `0x${address}`);
+            isValidAddress = true;
+          } else {
+            validationError = 'Address must be in bech32 (zil1...) or hex (0x...) format';
+          }
+        } catch (error) {
+          validationError = error instanceof Error ? error.message : 'Invalid Zilliqa address format';
+        }
+        
+        if (!isValidAddress) {
+          return {
+            content: [{
+              type: "text",
+              text: `**Faucet Request Failed**\n\n❌ Invalid address: ${validationError}`
+            }],
+            isError: true
+          };
+        }
+        
+        // Use testnet faucet URL
+        const faucetUrl = "https://faucet.zq2-testnet.zilliqa.com";
+        
+        try {
+          // Make request to faucet
+          const response = await fetch(faucetUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `address=${encodeURIComponent(address)}`,
+          });
+          
+          const responseText = await response.text();
+          
+          if (response.ok) {
+            // Check if the response indicates success
+            if (responseText.includes('notification is-success') || responseText.includes('Request sent') || responseText.includes('Transaction ID')) {
+              // Extract transaction ID if available
+              const txMatch = responseText.match(/Transaction ID:.*?href="[^"]*\/tx\/([^"]+)"/);
+              const txId = txMatch ? txMatch[1] : null;
+              
+              return {
+                content: [{
+                  type: "text",
+                  text: `**Faucet Request Successful** ✅\n\n` +
+                    `**Network:** testnet\n` +
+                    `**Address:** \`${address}\`\n` +
+                    `**Amount:** 100 ZIL\n` +
+                    `**Status:** Request submitted successfully\n` +
+                    `${txId ? `**Transaction ID:** \`${txId}\`\n` : ''}` +
+                    `**Explorer:** https://otterscan.testnet.zilliqa.com${txId ? `/tx/${txId}` : ''}\n\n` +
+                    `**Note:** It may take a few moments for the tokens to appear in your account.`
+                }]
+              };
+            }
+            // Check if the response indicates an error (rate limiting, etc.)
+            else if (responseText.includes('notification is-danger') || responseText.includes('Request made too recently') || responseText.includes('error')) {
+              // Extract error message if available
+              const errorMatch = responseText.match(/notification is-danger[^>]*>.*?<button[^>]*>[^<]*<\/button>\s*([^<]+)/);
+              const errorMessage = errorMatch ? errorMatch[1].trim() : 'Faucet request was not successful';
+              
+              return {
+                content: [{
+                  type: "text",
+                  text: `**Faucet Request Failed** ❌\n\n` +
+                    `**Network:** testnet\n` +
+                    `**Address:** \`${address}\`\n` +
+                    `**Error:** ${errorMessage}\n\n` +
+                    `**Suggestion:** ${errorMessage.includes('too recently') ? 'Please wait and try again later.' : 'Try again later or contact Zilliqa support if the issue persists.'}`
+                }],
+                isError: true
+              };
+            } else {
+              return {
+                content: [{
+                  type: "text",
+                  text: `**Faucet Request Status Unknown** ⚠️\n\n` +
+                    `**Network:** testnet\n` +
+                    `**Address:** \`${address}\`\n` +
+                    `**Status:** Request submitted but status unclear\n\n` +
+                    `**Note:** Please check your balance on the testnet explorer to verify if tokens were received.`
+                }]
+              };
+            }
+          } else {
+            return {
+              content: [{
+                type: "text",
+                text: `**Faucet Request Failed** ❌\n\n` +
+                  `**Network:** testnet\n` +
+                  `**Address:** \`${address}\`\n` +
+                  `**Error:** HTTP ${response.status} - ${response.statusText}\n\n` +
+                  `**Details:** The faucet service returned an error. This could be due to rate limiting or temporary service issues.`
+              }],
+              isError: true
+            };
+          }
+        } catch (error) {
+          return {
+            content: [{
+              type: "text",
+              text: `**Faucet Request Failed** ❌\n\n` +
+                `**Network:** testnet\n` +
+                `**Address:** \`${address}\`\n` +
+                `**Error:** ${error instanceof Error ? error.message : String(error)}\n\n` +
+                `**Suggestion:** Check your internet connection and try again.`
+            }],
+            isError: true
+          };
+        }
+      } catch (error) {
+        return {
+          content: [{
+            type: "text",
+            text: `Error processing faucet request: ${error instanceof Error ? error.message : String(error)}`
+          }],
+          isError: true
+        };
+      }
+    }
+  );
 } 
