@@ -863,13 +863,18 @@ export function registerEVMTools(server: McpServer) {
       try {
         const tokenInfo = await services.getERC20TokenInfo(tokenAddress as Address, network);
         
+        const serializableTokenInfo = {
+          ...tokenInfo,
+          totalSupply: tokenInfo.totalSupply.toString() // Convert BigInt to string
+        };
+
         return {
           content: [{
             type: "text",
             text: JSON.stringify({
               address: tokenAddress,
               network,
-              ...tokenInfo
+              ...serializableTokenInfo
             }, null, 2)
           }]
         };
