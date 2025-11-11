@@ -1,6 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
+// Global default network from environment; fallback to 'zilliqa'.
+declare const process: { env: Record<string, string | undefined> };
+const DEFAULT_NETWORK = (process.env.DEFAULT_NETWORK || 'zilliqa').toLowerCase();
+
 /**
  * Register all EVM-related prompts with the MCP server
  * @param server The MCP server instance
@@ -12,9 +16,9 @@ export function registerEVMPrompts(server: McpServer) {
     "Explore information about a specific block",
     {
       blockNumber: z.string().optional().describe("Block number to explore. If not provided, latest block will be used."),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Defaults to environment DEFAULT_NETWORK or 'ethereum'.")
     },
-    ({ blockNumber, network = "ethereum" }) => ({
+    ({ blockNumber, network = DEFAULT_NETWORK }) => ({
       messages: [{
         role: "user",
         content: {
@@ -33,9 +37,9 @@ export function registerEVMPrompts(server: McpServer) {
     "Analyze a specific transaction",
     {
       txHash: z.string().describe("Transaction hash to analyze"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name; defaults to environment DEFAULT_NETWORK or 'ethereum'.")
     },
-    ({ txHash, network = "ethereum" }) => ({
+    ({ txHash, network = DEFAULT_NETWORK }) => ({
       messages: [{
         role: "user",
         content: {
@@ -52,9 +56,9 @@ export function registerEVMPrompts(server: McpServer) {
     "Analyze an EVM address",
     {
       address: z.string().describe("Ethereum address to analyze"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name; defaults to environment DEFAULT_NETWORK or 'ethereum'.")
     },
-    ({ address, network = "ethereum" }) => ({
+    ({ address, network = DEFAULT_NETWORK }) => ({
       messages: [{
         role: "user",
         content: {
@@ -72,9 +76,9 @@ export function registerEVMPrompts(server: McpServer) {
     {
       contractAddress: z.string().describe("The contract address"),
       abiJson: z.string().optional().describe("The contract ABI as a JSON string"),
-      network: z.string().optional().describe("Network name or chain ID. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name or chain ID. Defaults to environment DEFAULT_NETWORK or 'ethereum'.")
     },
-    ({ contractAddress, abiJson, network = "ethereum" }) => ({
+    ({ contractAddress, abiJson, network = DEFAULT_NETWORK }) => ({
       messages: [{
         role: "user",
         content: {
@@ -94,7 +98,7 @@ export function registerEVMPrompts(server: McpServer) {
     {
       concept: z.string().describe("The EVM concept to explain (e.g., gas, nonce, etc.)")
     },
-    ({ concept }) => ({
+  ({ concept }) => ({
       messages: [{
         role: "user",
         content: {
@@ -112,7 +116,7 @@ export function registerEVMPrompts(server: McpServer) {
     {
       networkList: z.string().describe("Comma-separated list of networks to compare (e.g., 'ethereum,optimism,arbitrum')")
     },
-    ({ networkList }) => {
+  ({ networkList }) => {
       const networks = networkList.split(',').map(n => n.trim());
       return {
         messages: [{
@@ -134,9 +138,9 @@ export function registerEVMPrompts(server: McpServer) {
       tokenAddress: z.string().describe("Token contract address to analyze"),
       tokenType: z.string().optional().describe("Type of token to analyze (erc20, erc721/nft, or auto-detect). Defaults to auto."),
       tokenId: z.string().optional().describe("Token ID (required for NFT analysis)"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name; defaults to environment DEFAULT_NETWORK or 'ethereum'.")
     },
-    ({ tokenAddress, tokenType = "auto", tokenId, network = "ethereum" }) => {
+    ({ tokenAddress, tokenType = "auto", tokenId, network = DEFAULT_NETWORK }) => {
       let promptText = "";
       
       if (tokenType === "erc20" || tokenType === "auto") {

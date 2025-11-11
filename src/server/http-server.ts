@@ -44,7 +44,6 @@ app.get("/health", (req: Request, res: Response) => {
 });
 
 // Endpoint for StreamableHTTP connection
-// @ts-ignore
 app.get('/mcp', (req: Request, res: Response) => {
   console.error(`Received connection request from ${req.ip}`);
   
@@ -62,13 +61,7 @@ app.get('/mcp', (req: Request, res: Response) => {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   });
   
-  // Keep connection alive without sending initial message
-  // Gemini will handle the connection establishment through POST requests
-  
-  // Handle client disconnect
-  req.on('close', () => {
-    console.error('Connection closed');
-  });
+  res.end(); // No need to keep the connection open for the get request
 });
 
 // Main MCP endpoint - stateless mode

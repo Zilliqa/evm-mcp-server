@@ -5,6 +5,10 @@ import * as services from "./services/index.js";
 import { type Address, type Hex, type Hash } from 'viem';
 import { normalize } from 'viem/ens';
 
+// Global default network from environment; fallback to 'zilliqa'.
+declare const process: { env: Record<string, string | undefined> };
+const DEFAULT_NETWORK = (process.env.DEFAULT_NETWORK || 'zilliqa').toLowerCase();
+
 /**
  * Register all EVM-related tools with the MCP server
  * 
@@ -21,9 +25,9 @@ export function registerEVMTools(server: McpServer) {
     "get_chain_info",
     "Get information about an EVM network",
     {
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Zilliqa mainnet.")
     },
-    async ({ network = "ethereum" }) => {
+  async ({ network = DEFAULT_NETWORK }) => {
       try {
         const chainId = await services.getChainId(network);
         const blockNumber = await services.getBlockNumber(network);
@@ -60,9 +64,9 @@ export function registerEVMTools(server: McpServer) {
     "Resolve an ENS name to an Ethereum address",
     {
       ensName: z.string().describe("ENS name to resolve (e.g., 'vitalik.eth')"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. ENS resolution works best on Ethereum mainnet. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. ENS resolution works best on Ethereum mainnet. Defaults to Zilliqa mainnet.")
     },
-    async ({ ensName, network = "ethereum" }) => {
+  async ({ ensName, network = DEFAULT_NETWORK }) => {
       try {
         // Validate that the input is an ENS name
         if (!ensName.includes('.')) {
@@ -141,9 +145,9 @@ export function registerEVMTools(server: McpServer) {
     "Get a block by its block number",
     {
       blockNumber: z.number().describe("The block number to fetch"),
-      network: z.string().optional().describe("Network name or chain ID. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name or chain ID. Defaults to Zilliqa mainnet.")
     },
-    async ({ blockNumber, network = "ethereum" }) => {
+  async ({ blockNumber, network = DEFAULT_NETWORK }) => {
       try {
         const block = await services.getBlockByNumber(blockNumber, network);
         
@@ -170,9 +174,9 @@ export function registerEVMTools(server: McpServer) {
     "get_latest_block",
     "Get the latest block from the EVM",
     {
-      network: z.string().optional().describe("Network name or chain ID. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name or chain ID. Defaults to Zilliqa mainnet.")
     },
-    async ({ network = "ethereum" }) => {
+  async ({ network = DEFAULT_NETWORK }) => {
       try {
         const block = await services.getLatestBlock(network);
         
@@ -199,12 +203,12 @@ export function registerEVMTools(server: McpServer) {
   // Get ETH balance
   server.tool(
     "get_balance",
-    "Get the native token balance (ETH, MATIC, etc.) for an address", 
+    "Get the native token balance (ZIL, ETH, MATIC, etc.) for an address", 
     {
       address: z.string().describe("The wallet address or ENS name (e.g., '0x1234...' or 'vitalik.eth') to check the balance for"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Zilliqa mainnet.")
     },
-    async ({ address, network = "ethereum" }) => {
+  async ({ address, network = DEFAULT_NETWORK }) => {
       try {
         const balance = await services.getETHBalance(address, network);
         
@@ -215,7 +219,7 @@ export function registerEVMTools(server: McpServer) {
               address,
               network,
               wei: balance.wei.toString(),
-              ether: balance.ether
+              zils: balance.ether
             }, null, 2)
           }]
         };
@@ -238,9 +242,9 @@ export function registerEVMTools(server: McpServer) {
     {
       address: z.string().describe("The Ethereum address to check"),
       tokenAddress: z.string().describe("The ERC20 token contract address"),
-      network: z.string().optional().describe("Network name or chain ID. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name or chain ID. Defaults to Zilliqa mainnet.")
     },
-    async ({ address, tokenAddress, network = "ethereum" }) => {
+  async ({ address, tokenAddress, network = DEFAULT_NETWORK }) => {
       try {
         const balance = await services.getERC20Balance(
           tokenAddress as Address,
@@ -282,9 +286,9 @@ export function registerEVMTools(server: McpServer) {
     {
       tokenAddress: z.string().describe("The contract address or ENS name of the ERC20 token (e.g., '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' for USDC or 'uniswap.eth')"),
       ownerAddress: z.string().describe("The wallet address or ENS name to check the balance for (e.g., '0x1234...' or 'vitalik.eth')"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Zilliqa mainnet.")
     },
-    async ({ tokenAddress, ownerAddress, network = "ethereum" }) => {
+  async ({ tokenAddress, ownerAddress, network = DEFAULT_NETWORK }) => {
       try {
         const balance = await services.getERC20Balance(tokenAddress, ownerAddress, network);
         
@@ -322,9 +326,9 @@ export function registerEVMTools(server: McpServer) {
     "Get detailed information about a specific transaction by its hash. Includes sender, recipient, value, data, and more.",
     {
       txHash: z.string().describe("The transaction hash to look up (e.g., '0x1234...')"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. Defaults to Zilliqa mainnet.")
     },
-    async ({ txHash, network = "ethereum" }) => {
+  async ({ txHash, network = DEFAULT_NETWORK }) => {
       try {
         const tx = await services.getTransaction(txHash as Hash, network);
         
@@ -352,9 +356,9 @@ export function registerEVMTools(server: McpServer) {
     "Get a transaction receipt by its hash",
     {
       txHash: z.string().describe("The transaction hash to look up"),
-      network: z.string().optional().describe("Network name or chain ID. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name or chain ID. Defaults to Zilliqa mainnet.")
     },
-    async ({ txHash, network = "ethereum" }) => {
+  async ({ txHash, network = DEFAULT_NETWORK }) => {
       try {
         const receipt = await services.getTransactionReceipt(txHash as Hash, network);
         
@@ -384,9 +388,9 @@ export function registerEVMTools(server: McpServer) {
       to: z.string().describe("The recipient address"),
       value: z.string().optional().describe("The amount of ETH to send in ether (e.g., '0.1')"),
       data: z.string().optional().describe("The transaction data as a hex string"),
-      network: z.string().optional().describe("Network name or chain ID. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name or chain ID. Defaults to Zilliqa mainnet.")
     },
-    async ({ to, value, data, network = "ethereum" }) => {
+  async ({ to, value, data, network = DEFAULT_NETWORK }) => {
       try {
         const params: any = { to: to as Address };
         
@@ -431,9 +435,9 @@ export function registerEVMTools(server: McpServer) {
       privateKey: z.string().describe("Private key of the sender account in hex format (with or without 0x prefix). SECURITY: This is used only for transaction signing and is not stored."),
       to: z.string().describe("The recipient address or ENS name (e.g., '0x1234...' or 'vitalik.eth')"),
       amount: z.string().describe("Amount to send in ETH (or the native token of the network), as a string (e.g., '0.1')"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Zilliqa mainnet.")
     },
-    async ({ privateKey, to, amount, network = "ethereum" }) => {
+  async ({ privateKey, to, amount, network = DEFAULT_NETWORK }) => {
       try {
         const txHash = await services.transferETH(privateKey, to, amount, network);
         
@@ -470,9 +474,9 @@ export function registerEVMTools(server: McpServer) {
       tokenAddress: z.string().describe("The address of the ERC20 token contract"),
       toAddress: z.string().describe("The recipient address"),
       amount: z.string().describe("The amount of tokens to send (in token units, e.g., '10' for 10 tokens)"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Zilliqa mainnet.")
     },
-    async ({ privateKey, tokenAddress, toAddress, amount, network = "ethereum" }) => {
+  async ({ privateKey, tokenAddress, toAddress, amount, network = DEFAULT_NETWORK }) => {
       try {
         // Get the formattedKey with 0x prefix
         const formattedKey = privateKey.startsWith('0x') 
@@ -522,9 +526,9 @@ export function registerEVMTools(server: McpServer) {
       tokenAddress: z.string().describe("The contract address of the ERC20 token to approve for spending (e.g., '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' for USDC on Ethereum)"),
       spenderAddress: z.string().describe("The contract address being approved to spend your tokens (e.g., a DEX or lending protocol)"),
       amount: z.string().describe("The amount of tokens to approve in token units, not wei (e.g., '1000' to approve spending 1000 tokens). Use a very large number for unlimited approval."),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. Defaults to Zilliqa mainnet.")
     },
-    async ({ privateKey, tokenAddress, spenderAddress, amount, network = "ethereum" }) => {
+  async ({ privateKey, tokenAddress, spenderAddress, amount, network = DEFAULT_NETWORK }) => {
       try {
         // Get the formattedKey with 0x prefix
         const formattedKey = privateKey.startsWith('0x') 
@@ -576,7 +580,7 @@ export function registerEVMTools(server: McpServer) {
       toAddress: z.string().describe("The recipient wallet address that will receive the NFT"),
       network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. Most NFTs are on Ethereum mainnet, which is the default.")
     },
-    async ({ privateKey, tokenAddress, tokenId, toAddress, network = "ethereum" }) => {
+  async ({ privateKey, tokenAddress, tokenId, toAddress, network = DEFAULT_NETWORK }) => {
       try {
         // Get the formattedKey with 0x prefix
         const formattedKey = privateKey.startsWith('0x') 
@@ -628,9 +632,9 @@ export function registerEVMTools(server: McpServer) {
       tokenId: z.string().describe("The ID of the specific token to transfer (e.g., '1234')"),
       amount: z.string().describe("The quantity of tokens to send (e.g., '1' for a single NFT or '10' for 10 fungible tokens)"),
       toAddress: z.string().describe("The recipient wallet address that will receive the tokens"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. ERC1155 tokens exist across many networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. ERC1155 tokens exist across many networks. Defaults to Zilliqa mainnet.")
     },
-    async ({ privateKey, tokenAddress, tokenId, amount, toAddress, network = "ethereum" }) => {
+  async ({ privateKey, tokenAddress, tokenId, amount, toAddress, network = DEFAULT_NETWORK }) => {
       try {
         // Get the formattedKey with 0x prefix
         const formattedKey = privateKey.startsWith('0x') 
@@ -681,9 +685,9 @@ export function registerEVMTools(server: McpServer) {
       tokenAddress: z.string().describe("The contract address or ENS name of the ERC20 token to transfer (e.g., '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' for USDC or 'uniswap.eth')"),
       toAddress: z.string().describe("The recipient address or ENS name that will receive the tokens (e.g., '0x1234...' or 'vitalik.eth')"),
       amount: z.string().describe("Amount of tokens to send as a string (e.g., '100' for 100 tokens). This will be adjusted for the token's decimals."),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Zilliqa mainnet.")
     },
-    async ({ privateKey, tokenAddress, toAddress, amount, network = "ethereum" }) => {
+  async ({ privateKey, tokenAddress, toAddress, amount, network = DEFAULT_NETWORK }) => {
       try {
         const result = await services.transferERC20(
           tokenAddress,
@@ -730,9 +734,9 @@ export function registerEVMTools(server: McpServer) {
       abi: z.array(z.any()).describe("The ABI (Application Binary Interface) of the smart contract function, as a JSON array"),
       functionName: z.string().describe("The name of the function to call on the contract (e.g., 'balanceOf')"),
       args: z.array(z.any()).optional().describe("The arguments to pass to the function, as an array (e.g., ['0x1234...'])"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. Defaults to Zilliqa mainnet.")
     },
-    async ({ contractAddress, abi, functionName, args = [], network = "ethereum" }) => {
+  async ({ contractAddress, abi, functionName, args = [], network = DEFAULT_NETWORK }) => {
       try {
         // Parse ABI if it's a string
         const parsedAbi = typeof abi === 'string' ? JSON.parse(abi) : abi;
@@ -774,9 +778,9 @@ export function registerEVMTools(server: McpServer) {
       functionName: z.string().describe("The name of the function to call on the contract (e.g., 'transfer')"),
       args: z.array(z.any()).describe("The arguments to pass to the function, as an array (e.g., ['0x1234...', '1000000000000000000'])"),
       privateKey: z.string().describe("Private key of the sending account in hex format (with or without 0x prefix). SECURITY: This is used only for transaction signing and is not stored."),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. Defaults to Zilliqa mainnet.")
     },
-    async ({ contractAddress, abi, functionName, args, privateKey, network = "ethereum" }) => {
+  async ({ contractAddress, abi, functionName, args, privateKey, network = DEFAULT_NETWORK }) => {
       try {
         // Parse ABI if it's a string
         const parsedAbi = typeof abi === 'string' ? JSON.parse(abi) : abi;
@@ -822,9 +826,9 @@ export function registerEVMTools(server: McpServer) {
     "Check if an address is a smart contract or an externally owned account (EOA)",
     {
       address: z.string().describe("The wallet or contract address or ENS name to check (e.g., '0x1234...' or 'uniswap.eth')"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Zilliqa mainnet.")
     },
-    async ({ address, network = "ethereum" }) => {
+  async ({ address, network = DEFAULT_NETWORK }) => {
       try {
         const isContract = await services.isContract(address, network);
         
@@ -857,9 +861,9 @@ export function registerEVMTools(server: McpServer) {
     "Get comprehensive information about an ERC20 token including name, symbol, decimals, total supply, and other metadata. Use this to analyze any token on EVM chains.",
     {
       tokenAddress: z.string().describe("The contract address of the ERC20 token (e.g., '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' for USDC on Ethereum)"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. Defaults to Zilliqa mainnet.")
     },
-    async ({ tokenAddress, network = "ethereum" }) => {
+  async ({ tokenAddress, network = DEFAULT_NETWORK }) => {
       try {
         const tokenInfo = await services.getERC20TokenInfo(tokenAddress as Address, network);
         
@@ -897,9 +901,9 @@ export function registerEVMTools(server: McpServer) {
     {
       address: z.string().describe("The address to check balance for"),
       tokenAddress: z.string().describe("The ERC20 token contract address"),
-      network: z.string().optional().describe("Network name or chain ID. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name or chain ID. Defaults to Zilliqa mainnet.")
     },
-    async ({ address, tokenAddress, network = "ethereum" }) => {
+  async ({ address, tokenAddress, network = DEFAULT_NETWORK }) => {
       try {
         const balance = await services.getERC20Balance(
           tokenAddress as Address,
@@ -943,7 +947,7 @@ export function registerEVMTools(server: McpServer) {
       tokenId: z.string().describe("The ID of the specific NFT token to query (e.g., '1234')"),
       network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. Most NFTs are on Ethereum mainnet, which is the default.")
     },
-    async ({ tokenAddress, tokenId, network = "ethereum" }) => {
+  async ({ tokenAddress, tokenId, network = DEFAULT_NETWORK }) => {
       try {
         const nftInfo = await services.getERC721TokenMetadata(
           tokenAddress as Address, 
@@ -1003,9 +1007,9 @@ export function registerEVMTools(server: McpServer) {
       tokenAddress: z.string().describe("The contract address or ENS name of the NFT collection (e.g., '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D' for BAYC or 'boredapeyachtclub.eth')"),
       tokenId: z.string().describe("The ID of the NFT to check (e.g., '1234')"),
       ownerAddress: z.string().describe("The wallet address or ENS name to check ownership against (e.g., '0x1234...' or 'vitalik.eth')"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', etc.) or chain ID. Supports all EVM-compatible networks. Defaults to Zilliqa mainnet.")
     },
-    async ({ tokenAddress, tokenId, ownerAddress, network = "ethereum" }) => {
+  async ({ tokenAddress, tokenId, ownerAddress, network = DEFAULT_NETWORK }) => {
       try {
         const isOwner = await services.isNFTOwner(
           tokenAddress,
@@ -1046,9 +1050,9 @@ export function registerEVMTools(server: McpServer) {
     {
       tokenAddress: z.string().describe("The contract address of the ERC1155 token collection (e.g., '0x76BE3b62873462d2142405439777e971754E8E77')"),
       tokenId: z.string().describe("The ID of the specific token to query metadata for (e.g., '1234')"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. ERC1155 tokens exist across many networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. ERC1155 tokens exist across many networks. Defaults to Zilliqa mainnet.")
     },
-    async ({ tokenAddress, tokenId, network = "ethereum" }) => {
+  async ({ tokenAddress, tokenId, network = DEFAULT_NETWORK }) => {
       try {
         const uri = await services.getERC1155TokenURI(
           tokenAddress as Address, 
@@ -1088,7 +1092,7 @@ export function registerEVMTools(server: McpServer) {
       ownerAddress: z.string().describe("The wallet address to check the NFT balance for (e.g., '0x1234...')"),
       network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. Most NFTs are on Ethereum mainnet, which is the default.")
     },
-    async ({ tokenAddress, ownerAddress, network = "ethereum" }) => {
+  async ({ tokenAddress, ownerAddress, network = DEFAULT_NETWORK }) => {
       try {
         const balance = await services.getERC721Balance(
           tokenAddress as Address, 
@@ -1127,9 +1131,9 @@ export function registerEVMTools(server: McpServer) {
       tokenAddress: z.string().describe("The contract address of the ERC1155 token collection (e.g., '0x76BE3b62873462d2142405439777e971754E8E77')"),
       tokenId: z.string().describe("The ID of the specific token to check the balance for (e.g., '1234')"),
       ownerAddress: z.string().describe("The wallet address to check the token balance for (e.g., '0x1234...')"),
-      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. ERC1155 tokens exist across many networks. Defaults to Ethereum mainnet.")
+      network: z.string().optional().describe("Network name (e.g., 'ethereum', 'optimism', 'arbitrum', 'base', 'polygon') or chain ID. ERC1155 tokens exist across many networks. Defaults to Zilliqa mainnet.")
     },
-    async ({ tokenAddress, tokenId, ownerAddress, network = "ethereum" }) => {
+  async ({ tokenAddress, tokenId, ownerAddress, network = DEFAULT_NETWORK }) => {
       try {
         const balance = await services.getERC1155Balance(
           tokenAddress as Address, 
