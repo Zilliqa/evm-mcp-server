@@ -406,7 +406,7 @@ You can confirm receipt of funds by querying the balance:
 
 Prompts:
 ```
-Use the get-balance tool on address 0xc8d812e26216be9784EeEbeeaBff76c9Fb36272f for the testnet-zilliqa network.
+Get the balance of 0xc8d812e26216be9784EeEbeeaBff76c9Fb36272f address for the testnet-zilliqa network.
 ```
 ```
 Get the last request tokens transaction on address 0xc8d812e26216be9784EeEbeeaBff76c9Fb36272f for the testnet-zilliqa network.
