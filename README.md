@@ -5,7 +5,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6)
 ![Viem](https://img.shields.io/badge/Viem-1.0+-green)
 
-A comprehensive Model Context Protocol (MCP) server that provides blockchain services across multiple EVM-compatible networks. This server enables AI agents to interact with Ethereum, Optimism, Arbitrum, Base, Polygon, and many other EVM chains with a unified interface.
+A comprehensive Model Context Protocol (MCP) server that provides blockchain services across multiple EVM-compatible networks. This server enables AI agents to interact with Zilliqa, Ethereum, Optimism, Arbitrum, Base, Polygon, and many other EVM chains with a unified interface.
 
 ## 📋 Contents
 
@@ -16,6 +16,7 @@ A comprehensive Model Context Protocol (MCP) server that provides blockchain ser
 - [Installation](#installation)
 - [Server Configuration](#server-configuration)
 - [Usage](#usage)
+- [Usage Examples](#usage-examples)
 - [API Reference](#api-reference)
   - [Tools](#tools)
   - [Resources](#resources)
@@ -33,9 +34,8 @@ The MCP EVM Server leverages the Model Context Protocol to provide blockchain se
 - Transferring tokens (native, ERC20, ERC721, ERC1155)
 - Querying token metadata and balances
 - Chain-specific services across 30+ EVM networks
-- **ENS name resolution** for all address parameters (use human-readable names like 'vitalik.eth' instead of addresses)
 
-All services are exposed through a consistent interface of MCP tools and resources, making it easy for AI agents to discover and use blockchain functionality. **Every tool that accepts Ethereum addresses also supports ENS names**, automatically resolving them to addresses behind the scenes.
+All services are exposed through a consistent interface of MCP tools and resources, making it easy for AI agents to discover and use blockchain functionality.
 
 ## ✨ Features
 
@@ -62,7 +62,7 @@ All services are exposed through a consistent interface of MCP tools and resourc
   - Transfer NFTs between addresses
   - Retrieve token URIs and count holdings
 
-- **Multi-tokens (ERC1155)**
+- **Multi-token standard (ERC1155)**
   - Get token balances and metadata
   - Transfer tokens with quantity
   - Access token URIs
@@ -84,6 +84,7 @@ All services are exposed through a consistent interface of MCP tools and resourc
 ## 🌐 Supported Networks
 
 ### Mainnets
+- Zilliqa (Default network)
 - Ethereum (ETH)
 - Optimism (OP)
 - Arbitrum (ARB)
@@ -151,8 +152,8 @@ All services are exposed through a consistent interface of MCP tools and resourc
 
 ```bash
 # Clone the repository
-git clone https://github.com/mcpdotdirect/mcp-evm-server.git
-cd mcp-evm-server
+git clone https://github.com/Zilliqa/evm-mcp-server.git
+cd evm-mcp-server
 
 # Install dependencies with Bun
 bun install
@@ -165,32 +166,20 @@ npm install
 
 The server uses the following default configuration:
 
-- **Default Chain ID**: 1 (Ethereum Mainnet)
+- **Default Chain ID**: 32769 (Zilliqa Mainnet)
 - **Server Port**: 3000
 - **Server Host**: 0.0.0.0 (accessible from any network interface)
 
-These values are hardcoded in the application. If you need to modify them, you can edit the following files:
+These values are hard-coded in the application. If you need to modify them, you can edit the following files:
 
 - For chain configuration: `src/core/chains.ts`
 - For server configuration: `src/server/http-server.ts`
 
 ## 🚀 Usage
 
-### Using npx (No Installation Required)
-
-You can run the MCP EVM Server directly without installation using npx:
-
-```bash
-# Run the server in stdio mode (for CLI tools)
-npx @mcpdotdirect/evm-mcp-server
-
-# Run the server in HTTP mode (for web applications)
-npx @mcpdotdirect/evm-mcp-server --http
-```
-
 ### Running the Server Locally
 
-Start the server using stdio (for embedding in CLI tools):
+Start the server using stdio mode (for embedding in CLI tools):
 
 ```bash
 # Start the stdio server
@@ -225,7 +214,7 @@ To connect to the MCP server from Cursor:
 5. Enter the following details:
    - Server name: `evm-mcp-server`
    - Type: `command`
-   - Command: `npx @mcpdotdirect/evm-mcp-server`
+   - Command: `bun run src/index.ts` (use the full env-mcp-server path)
 
 6. Click "Save"
 
@@ -233,24 +222,23 @@ Once connected, you can use the MCP server's capabilities directly within Cursor
 
 ### Using mcp.json with Cursor
 
-For a more portable configuration that you can share with your team or use across projects, you can create an `.cursor/mcp.json` file in your project's root directory:
+For a more portable configuration that you can share with your team or use across projects, you can create an `.cursor/mcp.json` file in your project's root directory (use the full env-mcp-server path):
 
 ```json
 {
   "mcpServers": {
     "evm-mcp-server": {
-      "command": "npx",
+      "command": "bun",
       "args": [
-        "-y",
-        "@mcpdotdirect/evm-mcp-server"
+        "run", 
+        "src/index.ts", 
       ]
     },
     "evm-mcp-http": {
-      "command": "npx",
+      "command": "bun",
       "args": [
-        "-y", 
-        "@mcpdotdirect/evm-mcp-server", 
-        "--http"
+        "run", 
+        "src/server/http-server.ts", 
       ]
     }
   }
@@ -263,15 +251,15 @@ Place this file in your project's `.cursor` directory (create it if it doesn't e
 2. Version control your MCP setup
 3. Use different server configurations for different projects
 
-### Example: HTTP Mode with SSE
+### Example: HTTP Mode with HTTP Streamable
 
-If you're developing a web application and want to connect to the HTTP server with Server-Sent Events (SSE), you can use this configuration:
+If you're developing a web application and want to connect to the HTTP server with HTTP Streamable, you can use this configuration:
 
 ```json
 {
   "mcpServers": {
-    "evm-mcp-sse": {
-      "url": "http://localhost:3000/sse"
+    "evm-mcp-server": {
+      "httpUrl": "http://localhost:3000/mcp"
     }
   }
 }
@@ -288,102 +276,187 @@ To use this configuration:
 3. Restart Cursor or open your project
 4. Cursor will detect the configuration and offer to enable the server(s)
 
-### Example: Using the MCP Server in Cursor
+## Deployment
 
-After configuring the MCP server with `mcp.json`, you can easily use it in Cursor. Here's an example workflow:
+### Kubernetes
 
-1. Create a new JavaScript/TypeScript file in your project:
+The Kubernetes manifests for deploying this server are located in the `cd/` directory. Environment-specific configurations can be found in `cd/overlays/`.
 
-```javascript
-// blockchain-example.js
-async function main() {
-  try {
-    // Get ETH balance for an address using ENS
-    console.log("Getting ETH balance for vitalik.eth...");
-    
-    // When using with Cursor, you can simply ask Cursor to:
-    // "Check the ETH balance of vitalik.eth on mainnet"
-    // Or "Transfer 0.1 ETH from my wallet to vitalik.eth"
-    
-    // Cursor will use the MCP server to execute these operations 
-    // without requiring any additional code from you
-    
-    // This is the power of the MCP integration - your AI assistant
-    // can directly interact with blockchain data and operations
-  } catch (error) {
-    console.error("Error:", error.message);
+### Production Environment
+
+A production version of this server is automatically deployed via GitHub Actions pipelines. The deployment is triggered on the creation of a new release and it is accessible at the following URL:
+
+- **URL**: https://evm.mcp.zilliqa.com/mcp
+
+### Configuring the LLM settings
+
+Add this configuration in the LLM local settings to test the MCP server. This is an example for Gemini:
+
+```json
+"mcpServers": {
+  "evm-mcp-server": {
+    "httpUrl": "https://evm.mcp.zilliqa.com/mcp"
   }
 }
-
-main();
 ```
 
-2. With the file open in Cursor, you can ask Cursor to:
+## Usage Examples
 
-   - "Check the current ETH balance of vitalik.eth"
-   - "Look up the price of USDC on Ethereum"
-   - "Show me the latest block on Optimism"
-   - "Check if 0x1234... is a contract address"
+### Latest Block
 
-3. Cursor will use the MCP server to execute these operations and return the results directly in your conversation.
+Fetch the latest block from a specified network using the `get_latest_block` tool. This returns full block metadata including hashes, gas data, and consensus certificate fields (where applicable). If a network is not specified if will point to Zilliqa mainnet.
 
-The MCP server handles all the blockchain communication while allowing Cursor to understand and execute blockchain-related tasks through natural language.
+#### Prompt
 
-### Connecting using Claude CLI
-
-If you're using Claude CLI, you can connect to the MCP server with just two commands:
-
-```bash
-# Add the MCP server
-claude mcp add evm-mcp-server npx @mcpdotdirect/evm-mcp-server
-
-# Start Claude with the MCP server enabled
-claude
+```
+Get the latest block timestamp.
 ```
 
-### Example: Getting a Token Balance with ENS
+#### Direct Tool Invocation (JSON)
 
-```javascript
-// Example of using the MCP client to check a token balance using ENS
-const mcp = new McpClient("http://localhost:3000");
-
-const result = await mcp.invokeTool("get-token-balance", {
-  tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC on Ethereum
-  ownerAddress: "vitalik.eth", // ENS name instead of address
-  network: "ethereum"
-});
-
-console.log(result);
-// {
-//   tokenAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-//   owner: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-//   network: "ethereum",
-//   raw: "1000000000",
-//   formatted: "1000",
-//   symbol: "USDC",
-//   decimals: 6
-// }
+```json
+{
+  "tool": "get_latest_block",
+  "arguments": {
+    "network": "zilliqa"
+  }
+}
 ```
 
-### Example: Resolving an ENS Name
+#### Expected Response (Example)
 
-```javascript
-// Example of using the MCP client to resolve an ENS name to an address
-const mcp = new McpClient("http://localhost:3000");
-
-const result = await mcp.invokeTool("resolve-ens", {
-  ensName: "vitalik.eth",
-  network: "ethereum"
-});
-
-console.log(result);
-// {
-//   ensName: "vitalik.eth",
-//   normalizedName: "vitalik.eth",
-//   resolvedAddress: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-//   network: "ethereum"
-// }
+```json
+{
+  "number": "10411684",
+  "view": "0x9ff9c5",
+  "hash": "0x233df5d7e60b9947e4b25be0691a690787c89fac76dd55f23f5078c6dcbd4dfc",
+  "parentHash": "0xfbbc175435f5d82e6f7a18d261889c01379845904cac20aabca91923921f6f7a",
+  "nonce": "0x0000000000000000",
+  "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+  "transactionsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+  "stateRoot": "0x2808d2a9d0910ef38aa5f87cda28e4d30f8e67047c51d9f40e56d9703fecc66f",
+  "receiptsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+  "miner": "0x63ce81c023bb9f8a6ffa08fcf48ba885c21fcfbc",
+  "difficulty": "0",
+  "totalDifficulty": "0",
+  "extraData": "0x",
+  "gasLimit": "84000000",
+  "gasUsed": "0",
+  "timestamp": "1759152508",
+  "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "baseFeePerGas": "0",
+  "size": "440",
+  "transactions": [],
+  "uncles": [],
+  "quorumCertificate": {
+    "signature": "0xb532b66d680036b0364db472264f0a0c6874f5df844c60a81194053a949d2d71bb213f5ca3f21991e08844e2fae0183a0a3365294cff221857eddd194f899ea56feaba0f23eb2b181f760b9254a72cb3544f2de4fa204a9501548ef55dce03cb",
+    "cosigned": "0xf77ffb0000000000000000000000000000000000000000000000000000000000",
+    "view": "0x9ff9c4",
+    "block_hash": "0xfbbc175435f5d82e6f7a18d261889c01379845904cac20aabca91923921f6f7a"
+  }
+}
 ```
+
+#### Validation via Zilliqa Stats Dashboard
+
+You can manually verify the block number, hash, and timestamp against the public stats dashboard https://stats.zq2-mainnet.zilliqa.com/.
+
+### Zilliqa Testnet Faucet
+
+Request test tokens (ZIL) on the Zilliqa testnet using the `request_zilliqa_faucet` MCP tool. This is useful for quickly funding an address before testing contract interactions, transfers, or balance queries.
+
+#### Prompt
+
+```
+Request test tokens using the testnet-zilliqa faucet to the 0xc8d812e26216be9784EeEbeeaBff76c9Fb36272f address.
+```
+
+#### Direct Tool Invocation (JSON)
+
+```json
+{
+  "tool": "request_zilliqa_faucet",
+  "arguments": {
+    "address": "0xc8d812e26216be9784EeEbeeaBff76c9Fb36272f"
+  }
+}
+```
+
+#### Expected Successful Response
+
+```
+**Faucet Request Successful** ✅
+
+**Network:** testnet
+**Address:** `0xc8d812e26216be9784EeEbeeaBff76c9Fb36272f`
+**Amount:** 100 ZIL
+**Status:** Request submitted successfully
+**Transaction ID:** `0x283d62ed94456bd8aee16fa1f89a0538178e78f8219881b5e0e8c7a0531c525f`
+**Explorer:** https://otterscan.testnet.zilliqa.com/tx/0x283d62ed94456bd8aee16fa1f89a0538178e78f8219881b5e0e8c7a0531c525f
+
+**Note:** It may take a few moments for the tokens to appear in your account.
+```
+
+If the faucet rate limits you, you will receive a failure message with guidance to retry later.
+
+#### Verify the Funded Balance
+
+You can confirm receipt of funds by querying the balance:
+
+Prompts:
+```
+Use the get-balance tool on address 0xc8d812e26216be9784EeEbeeaBff76c9Fb36272f for the testnet-zilliqa network.
+```
+```
+Get the last request tokens transaction on address 0xc8d812e26216be9784EeEbeeaBff76c9Fb36272f for the testnet-zilliqa network.
+```
+
+### Zilliqa Address Conversion
+
+Convert a Zilliqa address between hex (`0x...`) and bech32 (`zil1...`) formats using the `convert-zilliqa-address` tool. This only applies to Zilliqa networks.
+
+#### Prompt
+
+```
+What is the Zilliqa address of 0x625dAB280fC96fFc8b28f5a5e9e0f19a93c6D0D8?
+```
+
+#### Direct Tool Invocation (JSON)
+
+```json
+{
+  "tool": "convert-zilliqa-address",
+  "arguments": {
+    "address": "0x625dAB280fC96fFc8b28f5a5e9e0f19a93c6D0D8",
+    "network": "zilliqa"
+  }
+}
+```
+
+#### Expected Response
+
+```json
+{
+  "network": "zilliqa",
+  "chainId": 32769,
+  "input": "0x625dAB280fC96fFc8b28f5a5e9e0f19a93c6D0D8",
+  "output": "zil1vfw6k2q0e9hlezeg7kj7nc83n2fud5xcch9k57",
+  "direction": "hex-to-bech32"
+}
+```
+
+#### Reverse Conversion Prompt
+
+```
+What is the address of zil1vfw6k2q0e9hlezeg7kj7nc83n2fud5xcch9k57?
+```
+
+#### Notes
+
+- The tool auto-detects the conversion direction if the `direction` parameter is omitted.
+- Only valid for Zilliqa networks (mainnet: `zilliqa`, testnet: `testnet-zilliqa`).
+- Useful before interacting with tooling that expects a specific format.
 
 ## 📚 API Reference
 
@@ -419,6 +492,13 @@ The server provides the following MCP tools for agents. **All tools that accept 
 | `write-contract` | Write to smart contract | `contractAddress` (address/ENS), `abi`, `functionName`, `args`, `privateKey`, `network` |
 | `is-contract` | Check if address is a contract | `address` (address/ENS), `network` |
 | `resolve-ens` | Resolve ENS name to address | `ensName`, `network` |
+
+#### Zilliqa services
+
+| Tool Name | Description | Key Parameters |
+|-----------|-------------|----------------|
+| `convert-zilliqa-address` | Convert a Zilliqa address between bech32 (zil1...) and hex (0x...) formats. | `address`, `direction`, `network` |
+| `request-zilliqa-faucet` | Request test tokens from Zilliqa testnet faucet for development and testing purposes | `address` |
 
 ### Resources
 
@@ -458,7 +538,7 @@ The server exposes blockchain data through the following MCP resource URIs. All 
 ## 📁 Project Structure
 
 ```
-mcp-evm-server/
+evm-mcp-server/
 ├── src/
 │   ├── index.ts                # Main stdio server entry point
 │   ├── server/                 # Server-related files
