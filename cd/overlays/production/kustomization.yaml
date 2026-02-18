@@ -16,7 +16,7 @@ patches:
         value: evm.mcp.zilliqa.com
       - op: replace
         path: "/spec/parentRefs/0/name"
-        value: mcp-gateway
+        value: gke-gateway
       - op: replace
         path: "/spec/parentRefs/0/namespace"
-        value: mcp-gateway-prd
+        value: gke-gateway-prd
