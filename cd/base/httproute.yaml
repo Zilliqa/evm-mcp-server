@@ -7,8 +7,8 @@ metadata:
     app.kubernetes.io/name: evm-mcp-server
 spec:
   parentRefs:
-    - name: mcp-gateway
-      namespace: mcp-gateway-stg
+    - name: gke-gateway
+      namespace: gke-gateway-stg
       sectionName: https
   hostnames:
     - "evm.mcp.zilliqa.com"
