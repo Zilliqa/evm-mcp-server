@@ -20,10 +20,3 @@ patches:
       - op: replace
         path: "/spec/parentRefs/0/namespace"
         value: gke-gateway-stg
-  - target:
-      kind: GCPBackendPolicy
-      name: evm-mcp-server
-    patch: |-
-      - op: replace
-        path: "/spec/default/securityPolicy"
-        value: staging-gateway

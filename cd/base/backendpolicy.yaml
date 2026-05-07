@@ -3,8 +3,6 @@ kind: GCPBackendPolicy
 metadata:
   name: evm-mcp-server
 spec:
-  default:
-    securityPolicy: mcp-gateway
   targetRef:
     group: ""
     kind: Service
